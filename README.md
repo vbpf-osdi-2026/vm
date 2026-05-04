@@ -2,15 +2,6 @@
 
 An integrated Python script for launching VMs with custom kernels and Ubuntu cloud-init rootfs using QEMU. Features a two-stage boot process perfect for kernel development and debugging.
 
-## Features
-
-- **Two-Stage Boot Process**: First boot with Ubuntu kernel for cloud-init, then development with custom kernel
-- **Custom Kernel Support**: Boot your compiled kernel with Ubuntu rootfs after initial setup
-- **Kernel Debugging**: GDB debugging with `-d` and `-S` flags, kernel logging with `-l`
-- **Cloud-Init Integration**: Uses your custom cloud-init files for system setup (first boot only)
-- **Development Workflow**: Integrated download, install, and development process
-- **Daemon Mode**: Run VMs in background with logging and monitoring
-- **KVM Acceleration**: High-performance virtualization with host CPU passthrough
 
 ## Quick Start
 
@@ -43,7 +34,24 @@ This will:
 - Download Ubuntu 24.04 Noble cloud image (~600MB) as rootfs
 - Resize image for additional space
 
-### 4. First Boot (Install Mode)
+### 4. Configure Network Bridge
+
+Before the install boot, make sure the `virbr0` bridge exists and QEMU bridge helper allows it.
+
+Configure QEMU bridge helper:
+```bash
+sudo mkdir -p /etc/qemu
+echo "allow virbr0" | sudo tee /etc/qemu/bridge.conf
+sudo chmod 0644 /etc/qemu/bridge.conf
+```
+
+Create the `virbr0` bridge manually:
+```bash
+sudo ip link add name virbr0 type bridge
+sudo ip addr add 192.168.122.1/24 dev virbr0
+sudo ip link set virbr0 up
+```
+### 5. First Boot (Install Mode)
 
 ```bash
 uv run vm.py --install
@@ -52,19 +60,28 @@ uv run vm.py --install
 This first boot will:
 - Use Ubuntu's own kernel (not your custom kernel)
 - Include cloud-init seed image for system setup
-- Configure users, packages, and system settings
+- Perform the required first-time configuration, including users, packages, networking, and system settings
+- Let you log in once with the configured Ubuntu account
 - After this completes, cloud-init is no longer needed
 
-### 5. Build Your Custom Kernel
+When the Ubuntu login prompt appears, sign in with:
+
+- **Username**: `ubuntu`
+- **Password**: `ubuntu`
+
+Then shut the VM down cleanly:
 
 ```bash
-cd ~/linux-6.12.40
-make -j$(nproc)
+sudo poweroff
 ```
 
-The script expects the kernel at `~/linux-6.12.40/arch/x86/boot/bzImage`.
+### 6. Build vBPF LLVM and Kernel
 
-### 6. Development Boots
+Follow the instructions in these two projects.
+
+The script expects the kernel at `~/linux-6.12.40/arch/x86/boot/bzImage`, but you can modify it to actual path in `config.json`.
+
+### 7. Development Boots
 
 ```bash
 # Regular development boot (your custom kernel)
@@ -79,6 +96,14 @@ uv run vm.py -l
 # Combined debugging
 uv run vm.py -d -S -l
 ```
+
+and you should be able to connect to it with ssh:
+
+```bash
+ssh ubuntu@192.168.122.10
+```
+
+Finally, feel free to compile and load eBPF scripts from vBPF example.
 
 ## Usage
 
@@ -113,13 +138,6 @@ uv run vm.py -d -S -l
 
 1. **Install Boot** (`--install`): Uses Ubuntu kernel with cloud-init for system setup
 2. **Development Boot** (default): Uses your custom kernel for development/debugging
-
-### Credentials
-
-After the install boot completes, the Ubuntu login is:
-
-- **Username**: `ubuntu`
-- **Password**: `ubuntu`
 
 ## Cloud-Init Configuration
 
@@ -218,41 +236,18 @@ This script replaces and integrates the following bash scripts:
 
 Install with: `uv sync`
 
-### Network Setup
-The script assumes the `virbr0` bridge exists and QEMU bridge helper allows it.
-
-Configure QEMU bridge helper:
-```bash
-sudo mkdir -p /etc/qemu
-echo "allow virbr0" | sudo tee /etc/qemu/bridge.conf
-sudo chmod 0644 /etc/qemu/bridge.conf
-```
-
-Create the `virbr0` bridge manually:
-```bash
-sudo ip link add name virbr0 type bridge
-sudo ip addr add 192.168.122.1/24 dev virbr0
-sudo ip link set virbr0 up
-```
-
-If using libvirt:
-```bash
-sudo systemctl start libvirtd
-sudo virsh net-start default
-```
-
 ## Troubleshooting
 
 ### Common Issues
 
 1. **"qemu-system-x86_64 not found"**
-   - Install QEMU: `sudo apt install qemu-system-x86_64`
+   - Install QEMU: `sudo apt install qemu-system-x86`
 
 2. **"genisoimage not found"**
    - Install genisoimage: `sudo apt install genisoimage`
 
 3. **"Custom kernel not found"** (development mode only)
-   - Build kernel: `cd ~/linux-6.12.40 && make -j$(nproc)`
+   - Build kernel
    - Or update kernel path in script
    - Note: Install mode doesn't need custom kernel
 
@@ -261,7 +256,7 @@ sudo virsh net-start default
    - Note: Development mode doesn't use cloud-init
 
 5. **Network connectivity issues**
-   - Ensure virbr0 bridge exists and libvirtd is running
+   - Ensure virbr0 bridge exists and it is running
    - Alternative: Change networking to user mode in QEMU flags
 
 5. **Permission denied for /dev/kvm**
