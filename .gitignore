@@ -1,0 +1,4 @@
+*.qcow2
+cloud-init/seed.img
+ubuntu.img
+__pycache__

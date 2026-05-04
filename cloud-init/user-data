@@ -1,0 +1,15 @@
+#cloud-config
+password: ubuntu
+chpasswd:
+  expire: False
+ssh_pwauth: True
+
+# Enable networking
+network:
+  config: disabled
+
+# Ensure network interfaces are brought up
+runcmd:
+  - netplan apply
+  - systemctl enable systemd-networkd
+  - systemctl start systemd-networkd

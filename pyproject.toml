@@ -1,0 +1,13 @@
+[project]
+name = "vm"
+version = "0.1.0"
+description = "VM environment"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "requests>=2.32.4",
+    "tqdm>=4.67.1",
+    "pytest>=8.0.0",
+    "textual>=0.90.0",
+    "paramiko>=3.4.0",
+]

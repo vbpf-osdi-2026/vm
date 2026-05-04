@@ -1,0 +1,16 @@
+{
+  "kernel": {
+    "path": "/home/mrzleo/dispatcher/arch/x86/boot/bzImage",
+    "bpf_debug_string": "dyndbg=\"file kernel/bpf/bpf_diff.c +p\""
+  },
+  "vm": {
+    "memory": "16G",
+    "cpus": "24",
+    "ubuntu_image_url": "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img",
+    "ubuntu_image_filename": "noble-server-cloudimg-amd64.img",
+    "ubuntu_image_symlink": "ubuntu.img"
+  },
+  "cloud_init": {
+    "directory": "cloud-init"
+  }
+}
